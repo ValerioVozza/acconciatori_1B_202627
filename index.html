@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Studio Riccio – Salone di parrucchieri in 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --scene:#E2E5E9; --ground:#D3D7DC;
+  --panel:rgba(255,255,255,.86); --panel-line:rgba(34,38,46,.12);
+  --ink:#22262E; --muted:#5E6470; --accent:#9A6C1E; --accent-soft:rgba(181,131,42,.18);
+  --display:"Bodoni Moda","Didot","Bodoni 72",Georgia,serif;
+  --body:"Figtree","Segoe UI",system-ui,-apple-system,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --scene:#181B21; --ground:#20242B;
+    --panel:rgba(26,29,36,.88); --panel-line:rgba(236,238,242,.12);
+    --ink:#ECEEF2; --muted:#A3A9B4; --accent:#E0B45A; --accent-soft:rgba(224,180,90,.16);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --scene:#181B21; --ground:#20242B;
+  --panel:rgba(26,29,36,.88); --panel-line:rgba(236,238,242,.12);
+  --ink:#ECEEF2; --muted:#A3A9B4; --accent:#E0B45A; --accent-soft:rgba(224,180,90,.16);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+body{background:var(--scene);color:var(--ink);font-family:var(--body);overflow:hidden;-webkit-font-smoothing:antialiased}
+#stage{position:fixed;inset:0}
+#stage canvas{display:block;touch-action:none;cursor:grab}
+#stage canvas:active{cursor:grabbing}
+.panel{background:var(--panel);border:1px solid var(--panel-line);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+
+.brand{position:fixed;top:calc(env(safe-area-inset-top,0px) + 18px);left:18px;padding:12px 20px 14px;border-radius:14px}
+.brand h1{font-family:var(--display);font-weight:500;font-size:30px;line-height:1;margin:0;letter-spacing:-.01em}
+.brand p{margin:6px 0 0;font-size:13px;color:var(--muted)}
+.brand::after{content:"";display:block;height:2px;width:42px;background:var(--accent);margin-top:10px;border-radius:2px}
+
+.rooms{position:fixed;left:18px;top:calc(env(safe-area-inset-top,0px) + 124px);padding:8px;border-radius:14px;display:flex;flex-direction:column;gap:2px;width:248px}
+.rooms button{all:unset;display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;font-size:14px;cursor:pointer;color:var(--ink)}
+.rooms button:hover{background:var(--accent-soft)}
+.rooms button[aria-pressed="true"]{background:var(--accent-soft);font-weight:600}
+.rooms button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.swatch{width:14px;height:14px;border-radius:50%;flex:none;border:1px solid rgba(0,0,0,.18)}
+
+.tools{position:fixed;top:calc(env(safe-area-inset-top,0px) + 18px);right:18px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:520px}
+.tools button{font:500 13px var(--body);color:var(--ink);padding:9px 14px;border-radius:999px;cursor:pointer}
+.tools button:hover{border-color:var(--accent)}
+.tools button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tools button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.card{position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);width:340px;padding:20px 22px 18px;border-radius:16px;transform:translateY(12px);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s}
+.card.open{opacity:1;transform:none;pointer-events:auto}
+.card h2{font-family:var(--display);font-weight:500;font-size:25px;margin:0 28px 8px 0;line-height:1.15}
+.card p{margin:0 0 12px;font-size:14px;line-height:1.55;color:var(--muted)}
+.card ul{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px}
+.card li{font-size:12.5px;padding:5px 10px;border-radius:999px;background:var(--accent-soft)}
+.card .close{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:50%;border:none;background:transparent;color:var(--muted);font-size:20px;cursor:pointer;line-height:1}
+.card .close:hover{color:var(--ink)}
+.card .close:focus-visible{outline:2px solid var(--accent)}
+
+.hint{position:fixed;left:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);font-size:12.5px;color:var(--muted);padding:8px 12px;border-radius:10px;max-width:420px}
+.tip{position:fixed;pointer-events:none;padding:5px 10px;border-radius:8px;font-size:13px;font-weight:600;transform:translate(14px,14px);opacity:0;transition:opacity .12s;white-space:nowrap}
+.tip.show{opacity:1}
+
+@media (max-width:760px){
+  .brand{left:12px;top:calc(env(safe-area-inset-top,0px) + 12px);padding:10px 14px}
+  .brand h1{font-size:23px}
+  .brand p{font-size:12px}
+  .brand::after{margin-top:7px}
+  .tools{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 72px);right:12px;left:12px;justify-content:flex-start}
+  .tools button{padding:7px 11px;font-size:12px}
+  .rooms{top:auto;left:0;right:0;width:auto;bottom:0;border-radius:16px 16px 0 0;flex-direction:row;overflow-x:auto;padding:8px 10px calc(env(safe-area-inset-bottom,0px) + 8px)}
+  .rooms button{white-space:nowrap;flex:none;font-size:13px}
+  .card{left:12px;right:12px;width:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 118px)}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){.card{transition:none}}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<header class="brand panel">
+  <h1>Studio Riccio</h1>
+  <p>Parrucchieri e acconciatore, pianta in 3D</p>
+</header>
+
+<nav class="rooms panel" id="rooms" aria-label="Ambienti del salone"></nav>
+
+<div class="tools">
+  <button class="panel" id="btnOverview">Vista d’insieme</button>
+  <button class="panel" id="btnTour" aria-pressed="false">Avvia il tour</button>
+  <button class="panel" id="btnWalls">Alza le pareti</button>
+  <button class="panel" id="btnLight">Luce serale</button>
+</div>
+
+<aside class="card panel" id="card" aria-live="polite">
+  <button class="close" id="cardClose" aria-label="Chiudi la scheda">×</button>
+  <h2 id="cardTitle"></h2>
+  <p id="cardText"></p>
+  <ul id="cardList"></ul>
+</aside>
+
+<div class="hint panel">Trascina per ruotare, usa la rotella o due dita per lo zoom, tieni premuto Maiusc (o il tasto destro) per spostarti. Tocca un ambiente per entrarci.</div>
+<div class="tip panel" id="tip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+const ROOMS=[
+  {id:"cut",name:"Sala taglio e piega",x1:-10,x2:-1,z1:0,z2:7,floor:0xE4E0DA,
+   text:"Il cuore del salone: quattro postazioni a parete e un’isola centrale con specchi su entrambi i lati, per taglio, piega e styling.",
+   items:["Taglio donna","Piega e messa in piega","Styling"]},
+  {id:"reception",name:"Reception e attesa",x1:-1,x2:4,z1:0,z2:7,floor:0xA3825F,
+   text:"Accoglienza, prenotazioni e cassa, con gli scaffali dei prodotti e un divanetto per chi aspetta.",
+   items:["Prenotazioni","Prodotti per capelli","Zona attesa"]},
+  {id:"barber",name:"Angolo barbiere",x1:4,x2:10,z1:0,z2:7,floor:0x8F9399,
+   text:"Spazio dedicato all’uomo con due poltrone da barbiere e una panca per l’attesa.",
+   items:["Taglio uomo","Barba e rasatura","Trattamenti cute"]},
+  {id:"wash",name:"Area lavaggio",x1:-10,x2:-4,z1:-7,z2:0,floor:0xDCE3E6,
+   text:"Tre lavatesta con poltrone reclinabili, in una stanza tranquilla separata dalla sala.",
+   items:["Shampoo e maschere","Trattamenti ristrutturanti","Massaggio cute"]},
+  {id:"color",name:"Laboratorio colore",x1:-4,x2:1,z1:-7,z2:0,floor:0xE8DCCB,
+   text:"Il banco per preparare le miscele di colore e due caschi per i tempi di posa.",
+   items:["Colore e tonalizzazione","Meches e balayage","Posa sotto casco"]},
+  {id:"studio",name:"Studio dell’acconciatore",x1:1,x2:6,z1:-7,z2:0,floor:0xEBD6CF,
+   text:"Lo spazio dell’acconciatore per raccolti, sposa ed eventi, con specchio luminoso, luce ad anello e teste di prova.",
+   items:["Acconciature sposa","Raccolti per eventi","Prove acconciatura"]},
+  {id:"back",name:"Retro e magazzino",x1:6,x2:10,z1:-7,z2:0,floor:0xCFCFCA,
+   text:"Magazzino dei prodotti, lavanderia per gli asciugamani e un tavolino per le pause dello staff.",
+   items:["Magazzino prodotti","Lavanderia","Pausa staff"]}
+];
+
+/* ---------- renderer & scene ---------- */
+const stage=document.getElementById("stage");
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+const canvas=renderer.domElement;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(42,innerWidth/innerHeight,.1,200);
+const groundMat=new THREE.MeshStandardMaterial({color:0xD3D7DC,roughness:1});
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(200,200),groundMat);
+ground.rotation.x=-Math.PI/2;ground.position.y=-.11;ground.receiveShadow=true;scene.add(ground);
+function applyTheme(){const cs=getComputedStyle(document.documentElement);
+  const bg=cs.getPropertyValue("--scene").trim()||"#E2E5E9",gr=cs.getPropertyValue("--ground").trim()||"#D3D7DC";
+  scene.background=new THREE.Color(bg);scene.fog=new THREE.Fog(bg,45,95);groundMat.color.set(gr);}
+applyTheme();
+try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",applyTheme);}catch(e){}
+
+/* ---------- lights ---------- */
+const hemi=new THREE.HemisphereLight(0xffffff,0xB9B3AA,.85);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xfff6ec,.75);sun.position.set(-8,18,12);sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-15,right:15,top:15,bottom:-15,near:1,far:50});
+sun.shadow.bias=-.0008;scene.add(sun);
+const roomLights=ROOMS.map(r=>{const l=new THREE.PointLight(0xFFD49A,0,9,2);l.position.set((r.x1+r.x2)/2,2.3,(r.z1+r.z2)/2);scene.add(l);return l;});
+
+/* ---------- helpers ---------- */
+const cache={};
+function M(c,o){o=o||{};const k=c+JSON.stringify(o);if(!cache[k])cache[k]=new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.8,metalness:0},o));return cache[k];}
+function sh(m){m.castShadow=true;m.receiveShadow=true;return m;}
+function box(p,w,h,d,c,x,y,z,o){const m=sh(new THREE.Mesh(new THREE.BoxGeometry(w,h,d),M(c,o)));m.position.set(x,y,z);p.add(m);return m;}
+function cyl(p,rt,rb,h,c,x,y,z,o,seg){const m=sh(new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg||28),M(c,o)));m.position.set(x,y,z);p.add(m);return m;}
+function blob(p,r,c,x,y,z){const m=sh(new THREE.Mesh(new THREE.IcosahedronGeometry(r,1),M(c,{flatShading:true,roughness:.9})));m.position.set(x,y,z);p.add(m);return m;}
+function grp(x,z,rot){const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=rot||0;scene.add(g);return g;}
+
+const C={white:0xF6F5F2,black:0x2A2C31,char:0x3B3F47,ochre:0xB5832A,mustard:0xD3A443,cream:0xEFE7DA,wood:0x9B7350,woodLight:0xC7A57E,
+  leaf:0x5F8466,leaf2:0x7EA27A,leather:0x5A3A2A,sage:0x8FA39A,rose:0xD7A7A0,skin:0xE6CBB3,mirror:0xCFDDE3};
+const CHROME={metalness:.8,roughness:.25},BRASS={metalness:.65,roughness:.35},GLASS={roughness:.05,metalness:.35};
+
+function plant(x,z,s){s=s||1;const g=grp(x,z);g.scale.setScalar(s);
+  cyl(g,.24,.18,.45,C.char,0,.225,0);blob(g,.32,C.leaf,0,.75,0);blob(g,.24,C.leaf2,.16,.98,.06);blob(g,.22,C.leaf,-.14,1.05,-.08);blob(g,.18,C.leaf2,.02,1.22,.02);}
+function salonChair(g,z,c){c=c||C.black;
+  cyl(g,.28,.28,.04,0x9EA3AA,0,.02,z,CHROME);cyl(g,.05,.05,.4,0x9EA3AA,0,.22,z,CHROME,12);
+  box(g,.56,.13,.55,c,0,.48,z);box(g,.56,.55,.1,c,0,.8,z+.26);
+  box(g,.08,.08,.45,c,-.31,.66,z);box(g,.08,.08,.45,c,.31,.66,z);box(g,.4,.04,.16,0x9EA3AA,0,.16,z-.4,CHROME);}
+function barberChair(g,z){
+  cyl(g,.32,.32,.05,0x9EA3AA,0,.03,z,CHROME);cyl(g,.07,.07,.42,0x9EA3AA,0,.25,z,CHROME,12);
+  box(g,.62,.16,.6,C.leather,0,.52,z,{roughness:.5});box(g,.62,.75,.12,C.leather,0,.95,z+.3,{roughness:.5});
+  box(g,.32,.18,.1,C.leather,0,1.42,z+.33,{roughness:.5});
+  box(g,.1,.1,.55,0x9EA3AA,-.36,.72,z,CHROME);box(g,.1,.1,.55,0x9EA3AA,.36,.72,z,CHROME);
+  const f=box(g,.45,.05,.22,0x9EA3AA,0,.22,z-.48,CHROME);f.rotation.x=.3;}
+function station(x,z,rot,o){o=o||{};const g=grp(x,z,rot);
+  if(!o.noMirror){box(g,1.06,1.55,.05,o.frame||C.ochre,0,1.55,-.88,BRASS);box(g,.96,1.44,.03,C.mirror,0,1.55,-.85,GLASS);}
+  box(g,1.06,.05,.36,o.top||C.char,0,.86,-.68);
+  cyl(g,.04,.04,.2,[C.mustard,C.white,C.rose][(Math.abs(Math.round(x*3+z)))%3],.36,.98,-.7,{roughness:.4},10);
+  cyl(g,.03,.03,.16,C.black,.26,.96,-.72,{},10);
+  box(g,.09,.14,.2,C.black,-.32,.96,-.68);
+  if(o.barber)barberChair(g,.2);else salonChair(g,.2,o.chair);return g;}
+function washUnit(x,z,rot){const g=grp(x,z,rot);
+  box(g,.62,.72,.5,C.char,0,.36,-.62);box(g,.62,.2,.52,C.black,0,.82,-.62,{roughness:.25});
+  box(g,.4,.04,.3,0x16171a,0,.93,-.6,{roughness:.2});cyl(g,.02,.02,.3,0x9EA3AA,0,1.02,-.82,CHROME,8);
+  box(g,.58,.4,1.1,C.char,0,.2,.25);box(g,.58,.13,.6,C.ochre,0,.47,.2,{roughness:.55});
+  const b=box(g,.58,.62,.1,C.ochre,0,.78,-.22,{roughness:.55});b.rotation.x=-.55;
+  const l=box(g,.5,.1,.5,C.ochre,0,.4,.72,{roughness:.55});l.rotation.x=-.25;return g;}
+function hoodDryer(x,z,rot){const g=grp(x,z,rot);salonChair(g,0,C.char);
+  cyl(g,.2,.24,.04,0x9EA3AA,0,.02,.62,CHROME);cyl(g,.025,.025,1.45,0x9EA3AA,0,.75,.62,CHROME,8);
+  const arm=box(g,.06,.06,.5,0x9EA3AA,0,1.47,.4,CHROME);arm.rotation.x=.1;
+  const h=sh(new THREE.Mesh(new THREE.SphereGeometry(.33,24,12,0,Math.PI*2,0,Math.PI/2),M(C.mustard,{side:THREE.DoubleSide,roughness:.4})));
+  h.position.set(0,1.28,.1);h.rotation.x=-.25;g.add(h);return h;}
+function sofa(x,z,rot,w,c){const g=grp(x,z,rot);
+  box(g,w,.42,.82,c,0,.21,0);box(g,w,.5,.2,c,0,.62,-.32);box(g,.16,.6,.82,c,-w/2+.08,.3,0);box(g,.16,.6,.82,c,w/2-.08,.3,0);
+  box(g,w/2-.18,.12,.58,c,-w/4+.02,.48,.06);box(g,w/2-.18,.12,.58,c,w/4-.02,.48,.06);return g;}
+function head(g,x,y,z,hair){cyl(g,.05,.07,.18,C.black,x,y+.09,z,{},12);
+  const s=sh(new THREE.Mesh(new THREE.SphereGeometry(.13,20,14),M(C.skin,{roughness:.6})));s.position.set(x,y+.3,z);s.scale.set(.9,1.1,1);g.add(s);
+  const h=blob(g,.15,hair,x,y+.37,z+.03);h.scale.set(1,.85,1.05);blob(g,.07,hair,x,y+.42,z+.14);}
+function trolley(x,z){const g=grp(x,z);[.2,.5,.8].forEach(y=>box(g,.45,.04,.4,C.char,0,y,0));
+  [[-.2,-.18],[.2,-.18],[-.2,.18],[.2,.18]].forEach(p=>cyl(g,.012,.012,.8,0x9EA3AA,p[0],.42,p[1],CHROME,6));
+  box(g,.12,.08,.2,C.black,-.08,.86,0);cyl(g,.03,.03,.14,C.mustard,.12,.88,.05,{},10);}
+
+/* ---------- floors ---------- */
+const floors=[];
+ROOMS.forEach(r=>{r.cx=(r.x1+r.x2)/2;r.cz=(r.z1+r.z2)/2;r.w=r.x2-r.x1;r.d=r.z2-r.z1;
+  const mat=new THREE.MeshStandardMaterial({color:r.floor,roughness:.85,emissive:0xD3A443,emissiveIntensity:0});
+  const m=new THREE.Mesh(new THREE.BoxGeometry(r.w,.1,r.d),mat);m.position.set(r.cx,-.05,r.cz);m.receiveShadow=true;
+  m.userData.room=r;r.mesh=m;r.glow=0;scene.add(m);floors.push(m);});
+/* terrazzo speckles in cut room */
+{const g=new THREE.Group();scene.add(g);const geo=new THREE.CircleGeometry(.05,6);
+ for(let i=0;i<260;i++){const m=new THREE.Mesh(geo,M([0xB9B2A6,0x8E8A84,0xD3A443,0xCFC8BC][i%4],{roughness:.9}));
+   m.rotation.x=-Math.PI/2;m.position.set(-9.9+Math.random()*8.8,.002,.1+Math.random()*6.8);m.scale.setScalar(.5+Math.random());g.add(m);}}
+/* barber checker */
+for(let i=0;i<6;i++)for(let j=0;j<7;j++)if((i+j)%2){const t=new THREE.Mesh(new THREE.PlaneGeometry(1,1),M(0x6E7278,{roughness:.6}));
+  t.rotation.x=-Math.PI/2;t.position.set(4.5+i,.002,.5+j);t.receiveShadow=true;scene.add(t);}
+
+/* ---------- walls ---------- */
+const walls=new THREE.Group();scene.add(walls);
+const WH=2.8,WT=.15;
+function wall(x1,z1,x2,z2,c){const hz=z1===z2;const len=hz?Math.abs(x2-x1):Math.abs(z2-z1);
+  const g=new THREE.BoxGeometry(hz?len+WT:WT,WH,hz?WT:len+WT);g.translate(0,WH/2,0);
+  const m=sh(new THREE.Mesh(g,M(c||0xEDEBE7,{roughness:.95})));m.position.set((x1+x2)/2,0,(z1+z2)/2);walls.add(m);}
+function run(x1,z1,x2,z2,gaps,c){gaps=(gaps||[]).slice().sort((a,b)=>a[0]-b[0]);const hz=z1===z2;let a=hz?x1:z1;const end=hz?x2:z2;
+  const seg=(s,e)=>hz?wall(s,z1,e,z1,c):wall(x1,s,x1,e,c);gaps.forEach(g=>{if(g[0]>a)seg(a,g[0]);a=g[1];});if(end>a)seg(a,end);}
+run(-10,-7,10,-7);
+run(-10,7,10,7,[[1,3]]);
+run(-10,-7,-10,7);run(10,-7,10,7,null,0x4A4E56);
+run(-10,0,10,0,[[-7,-6],[-3,-2],[3.1,3.9],[7.5,8.4]]);
+run(-1,0,-1,7,[[3,5.5]]);run(4,0,4,7,[[3,5]]);
+run(-4,-7,-4,0);run(1,-7,1,0);run(6,-7,6,0);
+let wallScale=.36,wallGoal=.36;walls.scale.y=wallScale;
+
+/* ---------- outside ---------- */
+for(let i=0;i<4;i++)box(scene,1.5,.05,.6,0xC9C4BB,2,0,7.7+i*.85);
+plant(.4,7.8,.9);plant(3.6,7.8,.9);
+
+/* ---------- cut & style ---------- */
+[1.3,2.9,4.5,6.1].forEach(z=>station(-9.05,z,Math.PI/2));
+box(scene,.22,1.9,3.2,C.char,-5.3,.95,3.5);
+box(scene,.03,1.4,1.2,C.mirror,-5.18,1.5,2.7,GLASS);box(scene,.03,1.4,1.2,C.mirror,-5.18,1.5,4.3,GLASS);
+box(scene,.03,1.4,1.2,C.mirror,-5.42,1.5,2.7,GLASS);box(scene,.03,1.4,1.2,C.mirror,-5.42,1.5,4.3,GLASS);
+[2.7,4.3].forEach(z=>{station(-4.45,z,Math.PI/2,{noMirror:true,chair:C.char});station(-6.15,z,-Math.PI/2,{noMirror:true,chair:C.char});});
+trolley(-7.7,2.1);trolley(-3.2,1.2);
+plant(-1.5,6.5,.85);plant(-1.5,.55,.75);
+/* hair clippings */
+for(let i=0;i<14;i++){const m=new THREE.Mesh(new THREE.BoxGeometry(.08,.005,.012),M([0x4A3222,0x8A5A2B,0x2B2420][i%3]));
+  m.position.set(-8.2+Math.random()*.5,.004,1+Math.floor(i/4)*1.6+Math.random()*.5);m.rotation.y=Math.random()*3;scene.add(m);}
+
+/* ---------- reception ---------- */
+{const g=grp(1.7,1.9);box(g,2.4,1.05,.65,C.char,0,.52,0);box(g,2.55,.06,.82,C.cream,0,1.08,-.02,{roughness:.3});
+ box(g,2.42,.06,.04,C.ochre,0,.3,.34,BRASS);box(g,.4,.3,.04,C.black,.55,1.27,-.15);
+ cyl(g,.05,.07,.3,C.white,-.85,1.25,0);blob(g,.13,C.leaf2,-.85,1.45,0);}
+{const g=grp(1.7,1.2);salonChair(g,0,C.char);}
+{const g=grp(.5,.27);box(g,2.6,2.1,.3,C.woodLight,0,1.05,0);
+ [.45,1.05,1.65].forEach((y,i)=>{box(g,2.5,.04,.32,C.white,0,y,.02);
+   for(let k=0;k<9;k++)cyl(g,.05,.05,.24,[C.black,C.mustard,C.white,C.rose][(k+i)%4],-1.1+k*.275,y+.14,.05,{roughness:.4},12);});}
+sofa(-.05,6.4,Math.PI,1.9,C.mustard);
+cyl(scene,.38,.38,.04,C.cream,-.05,.42,5.4,{roughness:.3});cyl(scene,.04,.04,.4,C.ochre,-.05,.2,5.4,BRASS,10);
+box(scene,.22,.03,.3,C.white,.05,.455,5.35);
+{const g=grp(3.3,5.4);cyl(g,.42,.42,.04,C.cream,0,.82,0,{roughness:.3});cyl(g,.05,.05,.8,C.ochre,0,.4,0,BRASS,10);
+ for(let k=0;k<6;k++){const a=k/6*6.28;cyl(g,.05,.05,.22,[C.black,C.mustard,C.white][k%3],Math.cos(a)*.25,.95,Math.sin(a)*.25,{roughness:.4},12);}}
+plant(3.55,6.5,.85);
+
+/* ---------- barber ---------- */
+station(9.05,2.1,-Math.PI/2,{barber:true,frame:C.black,top:C.wood});
+station(9.05,4.3,-Math.PI/2,{barber:true,frame:C.black,top:C.wood});
+{const g=grp(6.2,6.55);box(g,2.6,.08,.5,C.wood,0,.46,0);box(g,2.6,.5,.08,C.wood,0,.75,.2);
+ [-1.2,1.2].forEach(x=>box(g,.08,.45,.45,C.black,x,.22,0));}
+box(scene,.5,1.9,.4,C.wood,4.4,.95,.4);
+for(let k=0;k<3;k++)cyl(scene,.12,.12,.16,C.white,4.4,.3+k*.55,.6,{roughness:.5},16);
+const poleTex=(function(){const c=document.createElement("canvas");c.width=64;c.height=64;const x=c.getContext("2d");
+  x.fillStyle="#f5f2ec";x.fillRect(0,0,64,64);const cols=["#B3262E","#f5f2ec","#26457A","#f5f2ec"];
+  for(let i=-4;i<8;i++){x.fillStyle=cols[(i+8)%4];x.beginPath();x.moveTo(i*16,0);x.lineTo(i*16+16,0);x.lineTo(i*16+16+64,64);x.lineTo(i*16+64,64);x.fill();}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(1,2);return t;})();
+const pole=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.8,24),new THREE.MeshStandardMaterial({map:poleTex,roughness:.3,emissive:0xffffff,emissiveMap:poleTex,emissiveIntensity:.15}));
+pole.position.set(9.8,1.6,6.2);scene.add(pole);
+cyl(scene,.1,.1,.06,0xB5832A,9.8,2.03,6.2,BRASS);cyl(scene,.1,.1,.06,0xB5832A,9.8,1.17,6.2,BRASS);
+plant(9.5,.55,.8);
+
+/* ---------- wash ---------- */
+[-8.8,-7,-5.2].forEach(x=>washUnit(x,-6.1,0));
+{const g=grp(-9.75,-3);box(g,.32,1.6,1.4,C.white,0,.8,0);
+ [.35,.85,1.35].forEach(y=>{for(let k=0;k<3;k++)box(g,.26,.14,.34,[C.white,C.cream,C.sage][k],.02,y+.08,-.45+k*.45);});}
+plant(-4.5,-.6,.8);
+
+/* ---------- color lab ---------- */
+{const g=grp(-1.5,-6.62);box(g,4.6,.88,.55,C.white,0,.44,0);box(g,4.7,.05,.62,C.char,0,.9,0,{roughness:.3});
+ box(g,4.6,.04,.25,C.woodLight,0,1.55,-.18);box(g,4.6,.04,.25,C.woodLight,0,1.95,-.18);
+ const tubeCols=[0x2B1D16,0x5A3420,0x8A5A2B,0xB8834A,0xD9B27C,0xE8D2A6,0x8E2B3A,0xB0473C,0x6A4C7A,0xCFCFCF];
+ [1.55,1.95].forEach((y,r)=>{for(let k=0;k<20;k++)box(g,.12,.22,.05,tubeCols[(k+r*3)%tubeCols.length],-2.15+k*.225,y+.13,-.18,{roughness:.5});});
+ [[-1.4,0x5A3420],[-1,0xB0473C],[-.6,0xD9B27C]].forEach(b=>{cyl(g,.12,.08,.07,C.black,b[0],.96,.05,{},18);cyl(g,.1,.1,.01,b[1],b[0],1,.05,{},18);});
+ box(g,.3,.08,.2,C.black,.6,.97,.05);box(g,.5,.18,.4,0x9EA3AA,1.7,.85,0,CHROME);}
+const hoods=[hoodDryer(.25,-4.1,Math.PI/2),hoodDryer(.25,-2.4,Math.PI/2)];
+trolley(-3.4,-3.6);
+plant(-3.5,-.6,.75);
+
+/* ---------- stylist studio ---------- */
+const bulbs=[];
+{const g=grp(3.5,-6.82);box(g,1.6,.85,.45,C.white,0,.43,.12);box(g,1.65,.04,.5,C.cream,0,.87,.12,{roughness:.3});
+ box(g,1.3,1.1,.04,C.black,0,1.62,-.04);box(g,1.18,.98,.03,C.mirror,0,1.62,-.01,GLASS);
+ const pts=[];for(let i=0;i<5;i++){pts.push([-.55+i*.275,2.13]);}for(let i=1;i<4;i++){pts.push([-.62,1.12+i*.25]);pts.push([.62,1.12+i*.25]);}
+ pts.forEach(p=>{const b=new THREE.Mesh(new THREE.SphereGeometry(.035,10,8),new THREE.MeshStandardMaterial({color:0xFFF2D6,emissive:0xFFD98A,emissiveIntensity:.5}));
+   b.position.set(p[0],p[1],.02);g.add(b);bulbs.push(b);});
+ for(let k=0;k<5;k++)cyl(g,.03,.03,.12,[C.rose,C.white,C.mustard,C.black,C.rose][k],-.5+k*.2,.95,.25,{roughness:.4},10);}
+{const g=grp(3.5,-5.75);salonChair(g,0,C.rose);}
+{const g=grp(2.2,-5.5);cyl(g,.22,.25,.04,C.black,0,.02,0);cyl(g,.02,.02,1.6,C.black,0,.82,0,{},8);
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(.26,.035,12,40),new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xffffff,emissiveIntensity:.35}));
+ ring.position.set(0,1.75,.05);ring.rotation.y=.4;g.add(ring);bulbs.push(ring);}
+{const g=grp(5.65,-2.6);box(g,.6,.9,1.8,C.woodLight,0,.45,0);
+ [[-.6,0x3A2618],[0,0xC99A5A],[.6,0x7A3A2A]].forEach(h=>head(g,0,.9,h[0],h[1]));}
+sofa(1.55,-2.4,Math.PI/2,1.6,C.rose);
+{const g=grp(4.9,-.75,-.4);box(g,.6,1.7,.04,C.black,0,.95,0);box(g,.52,1.6,.02,C.mirror,0,.95,.025,GLASS);box(g,.4,.04,.3,C.black,0,.04,-.1);}
+trolley(4.7,-5.4);
+
+/* ---------- back room ---------- */
+{const g=grp(7.6,-6.72);box(g,2.6,2.2,.45,C.white,0,1.1,0);
+ [.3,.85,1.4,1.95].forEach((y,i)=>{for(let k=0;k<4;k++)box(g,.5,.38,.36,[0xC9B08A,0xB89C76,0xD8C4A2][(k+i)%3],-.9+k*.6,y+.2,.02);});}
+box(scene,.65,.85,.62,C.white,9.55,.43,-6.55);box(scene,.65,.85,.62,C.white,9.55,1.3,-6.55);
+cyl(scene,.2,.2,.03,0x7F9BA6,9.55,.48,-6.23,GLASS);cyl(scene,.2,.2,.03,0x7F9BA6,9.55,1.35,-6.23,GLASS);
+cyl(scene,.32,.32,.04,C.cream,8,.74,-3.4,{roughness:.3});cyl(scene,.04,.04,.72,C.black,8,.36,-3.4,{},10);
+{const g=grp(8,-2.75,Math.PI);salonChair(g,0,C.sage);}
+{const g=grp(8,-4.05,0);salonChair(g,0,C.sage);}
+cyl(scene,.3,.25,.45,C.wood,9.4,.23,-1.2,{},16);box(scene,.45,.12,.45,C.white,9.4,.48,-1.2);
+
+/* ---------- camera / orbit ---------- */
+const isNarrow=()=>innerWidth<760;
+const orbit={target:new THREE.Vector3(),tG:new THREE.Vector3(),theta:-.5,thG:-.5,phi:.92,phG:.92,r:isNarrow()?40:28,rG:isNarrow()?40:28};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function overview(){orbit.tG.set(0,0,isNarrow()?1.5:0);orbit.rG=isNarrow()?40:28;orbit.phG=.92;orbit.thG=-.5;select(null);}
+function pan(dx,dy){const s=orbit.r*.0016,st=Math.sin(orbit.theta),ct=Math.cos(orbit.theta);
+  orbit.tG.x-=ct*dx*s;orbit.tG.z+=st*dx*s;orbit.tG.x-=st*dy*s;orbit.tG.z-=ct*dy*s;
+  orbit.tG.x=clamp(orbit.tG.x,-12,12);orbit.tG.z=clamp(orbit.tG.z,-10,10);}
+
+/* ---------- UI ---------- */
+const nav=document.getElementById("rooms"),card=document.getElementById("card");const btns={};
+ROOMS.forEach(r=>{const b=document.createElement("button");b.setAttribute("aria-pressed","false");
+  b.innerHTML='<span class="swatch" style="background:#'+r.floor.toString(16).padStart(6,"0")+'"></span>'+r.name;
+  b.addEventListener("click",()=>{stopTour();select(r);});nav.appendChild(b);btns[r.id]=b;});
+let selected=null;
+function select(r){selected=r;
+  Object.keys(btns).forEach(k=>btns[k].setAttribute("aria-pressed",r&&r.id===k?"true":"false"));
+  if(!r){card.classList.remove("open");return;}
+  orbit.tG.set(r.cx,.3,r.cz+(isNarrow()?1.2:0));orbit.rG=Math.max(r.w,r.d)*1.2+(isNarrow()?6:3.5);orbit.phG=.82;
+  document.getElementById("cardTitle").textContent=r.name;document.getElementById("cardText").textContent=r.text;
+  document.getElementById("cardList").innerHTML=r.items.map(i=>"<li>"+i+"</li>").join("");card.classList.add("open");
+  if(btns[r.id].scrollIntoView)btns[r.id].scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"});}
+document.getElementById("cardClose").addEventListener("click",()=>select(null));
+document.getElementById("btnOverview").addEventListener("click",()=>{stopTour();overview();});
+const btnWalls=document.getElementById("btnWalls");
+btnWalls.addEventListener("click",()=>{const up=wallGoal<.5;wallGoal=up?1:.36;btnWalls.textContent=up?"Abbassa le pareti":"Alza le pareti";});
+let night=false;const btnLight=document.getElementById("btnLight");
+btnLight.addEventListener("click",()=>{night=!night;btnLight.textContent=night?"Luce diurna":"Luce serale";});
+let tourTimer=null,tourIdx=0;const btnTour=document.getElementById("btnTour");
+function stopTour(){if(tourTimer){clearInterval(tourTimer);tourTimer=null;btnTour.setAttribute("aria-pressed","false");btnTour.textContent="Avvia il tour";}}
+btnTour.addEventListener("click",()=>{if(tourTimer){stopTour();return;}
+  btnTour.setAttribute("aria-pressed","true");btnTour.textContent="Ferma il tour";tourIdx=0;select(ROOMS[0]);
+  tourTimer=setInterval(()=>{tourIdx=(tourIdx+1)%ROOMS.length;select(ROOMS[tourIdx]);orbit.thG+=.5;},5000);});
+
+/* ---------- input ---------- */
+const ray=new THREE.Raycaster(),mouse=new THREE.Vector2(),tip=document.getElementById("tip");let hovered=null;
+function pick(e){mouse.x=e.clientX/innerWidth*2-1;mouse.y=-(e.clientY/innerHeight)*2+1;ray.setFromCamera(mouse,camera);
+  const h=ray.intersectObjects(floors);return h.length?h[0].object.userData.room:null;}
+const pointers=new Map();let moved=0,lastPinch=null,panMode=false;
+canvas.addEventListener("contextmenu",e=>e.preventDefault());
+canvas.addEventListener("pointerdown",e=>{canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});moved=0;panMode=e.button===2||e.shiftKey;stopTour();});
+canvas.addEventListener("pointermove",e=>{const p=pointers.get(e.pointerId);
+  if(!p){if(e.pointerType==="mouse"){hovered=pick(e);if(hovered){tip.textContent=hovered.name;tip.style.left=e.clientX+"px";tip.style.top=e.clientY+"px";tip.classList.add("show");canvas.style.cursor="pointer";}else{tip.classList.remove("show");canvas.style.cursor="";}}return;}
+  const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;moved+=Math.abs(dx)+Math.abs(dy);tip.classList.remove("show");
+  if(pointers.size===1){if(panMode)pan(dx,dy);else{orbit.thG-=dx*.006;orbit.phG=clamp(orbit.phG-dy*.005,.18,1.38);}}
+  else if(pointers.size===2){const v=[...pointers.values()];const dist=Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y);
+    if(lastPinch)orbit.rG=clamp(orbit.rG*lastPinch/dist,5,50);lastPinch=dist;pan(dx/2,dy/2);}});
+function up(e){if(!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);if(pointers.size<2)lastPinch=null;
+  if(pointers.size===0&&moved<6){const r=pick(e);if(r)select(r);}}
+canvas.addEventListener("pointerup",up);canvas.addEventListener("pointercancel",e=>{pointers.delete(e.pointerId);lastPinch=null;});
+canvas.addEventListener("pointerleave",()=>{tip.classList.remove("show");hovered=null;});
+canvas.addEventListener("wheel",e=>{e.preventDefault();stopTour();orbit.rG=clamp(orbit.rG*(1+e.deltaY*.0012),5,50);},{passive:false});
+addEventListener("resize",()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+/* ---------- loop ---------- */
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;const clock=new THREE.Clock();
+function tick(){const t=clock.getElapsedTime(),k=reduce?1:.09;
+  orbit.theta+=(orbit.thG-orbit.theta)*k;orbit.phi+=(orbit.phG-orbit.phi)*k;orbit.r+=(orbit.rG-orbit.r)*k;orbit.target.lerp(orbit.tG,k);
+  const sp=Math.sin(orbit.phi);
+  camera.position.set(orbit.target.x+orbit.r*sp*Math.sin(orbit.theta),orbit.target.y+orbit.r*Math.cos(orbit.phi),orbit.target.z+orbit.r*sp*Math.cos(orbit.theta));
+  camera.lookAt(orbit.target);
+  wallScale+=(wallGoal-wallScale)*.1;walls.scale.y=wallScale;
+  hemi.intensity+=((night?.18:.85)-hemi.intensity)*.06;sun.intensity+=((night?.08:.75)-sun.intensity)*.06;
+  roomLights.forEach(l=>{l.intensity+=((night?1.1:0)-l.intensity)*.06;});
+  bulbs.forEach(b=>{b.material.emissiveIntensity+=((night?1.4:.45)-b.material.emissiveIntensity)*.06;});
+  ROOMS.forEach(r=>{const goal=r===selected?.22:(r===hovered?.11:0);r.glow+=(goal-r.glow)*.15;r.mesh.material.emissiveIntensity=r.glow;});
+  if(!reduce)poleTex.offset.y=(t*.35)%1;
+  renderer.render(scene,camera);requestAnimationFrame(tick);}
+tick();
+})();
+</script>
+</body>
+</html>
